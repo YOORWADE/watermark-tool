@@ -11,7 +11,7 @@
     <div class="header-inner">
       <div class="header-left">
         <h1>去水印工具</h1>
-        <p class="subtitle">框选水印区域，一键智能修复 &mdash; 支持图片与视频</p>
+        <p class="subtitle">支持自动识别与手动框选 &mdash; 图片 / 视频均可处理</p>
       </div>
       <div class="net-badge">
         <span class="net-label">手机访问</span>
@@ -21,7 +21,6 @@
   </header>
 
   <main>
-    <!-- 模式切换 -->
     <div class="tabs">
       <button class="tab-btn active" data-mode="image">图片模式</button>
       <button class="tab-btn" data-mode="video">视频模式</button>
@@ -42,18 +41,33 @@
     <!-- 画板区域 -->
     <div id="canvas-section" class="hidden">
       <div class="toolbar">
-        <p class="toolbar-hint">拖拽鼠标（或手指）框选水印区域，可叠加多个选框</p>
+        <div class="toolbar-left">
+          <!-- 自动识别按钮 -->
+          <button id="auto-detect-btn" class="detect-btn">自动识别水印</button>
+          <span class="toolbar-divider"></span>
+          <span class="toolbar-hint">或手动拖拽框选区域</span>
+        </div>
         <div class="toolbar-btns">
           <button id="undo-btn" class="tool-btn">撤销</button>
-          <button id="clear-btn" class="tool-btn">清除全部</button>
+          <button id="clear-btn" class="tool-btn">清除</button>
         </div>
+      </div>
+
+      <!-- 检测提示条 -->
+      <div id="detect-tip" class="detect-tip hidden">
+        自动识别结果仅供参考，可手动调整后再处理
       </div>
 
       <div class="canvas-wrapper">
         <canvas id="main-canvas"></canvas>
+        <!-- 识别中蒙层 -->
+        <div id="detect-overlay" class="detect-overlay hidden">
+          <div class="detect-spinner"></div>
+          <p>识别中…</p>
+        </div>
       </div>
 
-      <p class="hint center">红色矩形区域将被去除 &mdash; 尽量贴合水印边缘以获得最佳效果</p>
+      <p class="hint center">红色区域将被去除 &mdash; 可叠加多个选框</p>
 
       <div class="action-row">
         <button id="process-btn" class="primary-btn">开始去除水印</button>
@@ -66,7 +80,7 @@
       <p id="loading-text">处理中，请稍候…</p>
     </div>
 
-    <!-- 结果展示 -->
+    <!-- 结果 -->
     <div id="result-section" class="hidden">
       <h2 class="result-title">处理完成</h2>
       <div class="result-media">

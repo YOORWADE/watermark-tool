@@ -25,7 +25,6 @@ header {
 h1 { font-size: 1.4rem; font-weight: 700; color: #a0b4ff; letter-spacing: 0.5px; }
 .subtitle { margin-top: 3px; font-size: 0.82rem; color: #555; }
 
-/* 手机访问地址徽章 */
 .net-badge {
   display: flex;
   align-items: center;
@@ -40,9 +39,9 @@ h1 { font-size: 1.4rem; font-weight: 700; color: #a0b4ff; letter-spacing: 0.5px;
 #mobile-url {
   font-size: 0.82rem;
   color: #7c9ef8;
-  background: transparent;
   font-family: 'SF Mono', 'Consolas', monospace;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 /* ── Main ── */
@@ -66,12 +65,11 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
   background: rgba(107, 140, 255, 0.1);
 }
 
-/* ── Utility ── */
 .hidden { display: none !important; }
 .hint { font-size: 0.82rem; color: #555; }
 .hint.center { text-align: center; margin-top: 8px; }
 
-/* ── Upload area ── */
+/* ── Upload ── */
 #upload-area {
   border: 2px dashed #2e2e45;
   border-radius: 14px;
@@ -90,7 +88,7 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 #file-input { display: none; }
 
 /* ── Canvas section ── */
-#canvas-section { display: flex; flex-direction: column; gap: 12px; }
+#canvas-section { display: flex; flex-direction: column; gap: 10px; }
 
 .toolbar {
   display: flex;
@@ -101,12 +99,24 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
   background: #16161f;
   border: 1px solid #2a2a3a;
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 10px 14px;
 }
-.toolbar-hint { font-size: 0.83rem; color: #666; flex: 1; min-width: 180px; }
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: #2a2a3a;
+  flex-shrink: 0;
+}
+.toolbar-hint { font-size: 0.82rem; color: #555; }
 .toolbar-btns { display: flex; gap: 8px; }
 .tool-btn {
-  padding: 6px 16px;
+  padding: 6px 14px;
   border: 1px solid #333;
   border-radius: 6px;
   background: #1e1e2e;
@@ -117,7 +127,43 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 }
 .tool-btn:hover { border-color: #6b8cff; color: #a0b4ff; }
 
+/* 自动识别按钮 */
+.detect-btn {
+  padding: 7px 18px;
+  border: 1.5px solid #7c3aed;
+  border-radius: 7px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #c084fc;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.detect-btn:hover {
+  background: rgba(124, 58, 237, 0.25);
+  border-color: #a855f7;
+  color: #e879f9;
+}
+.detect-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 检测提示条 */
+.detect-tip {
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  color: #c084fc;
+  text-align: center;
+}
+
+/* ── Canvas ── */
 .canvas-wrapper {
+  position: relative;
   background: #080810;
   border-radius: 10px;
   border: 1px solid #1e1e2e;
@@ -135,9 +181,32 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
   height: auto;
   border-radius: 6px;
   cursor: crosshair;
-  touch-action: none; /* 阻止触摸滚动，确保手机拖拽框选正常 */
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* 识别中蒙层 */
+.detect-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 20, 0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-radius: 8px;
+  color: #c084fc;
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+.detect-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid rgba(124, 58, 237, 0.2);
+  border-top-color: #a855f7;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
 }
 
 .action-row { display: flex; justify-content: center; padding-top: 4px; }
@@ -153,7 +222,6 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s, transform 0.1s;
-  letter-spacing: 0.3px;
 }
 .primary-btn:hover { opacity: 0.88; }
 .primary-btn:active { transform: scale(0.97); }
@@ -229,7 +297,6 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
   .tabs { gap: 6px; }
   .tab-btn { padding: 7px 18px; font-size: 0.85rem; }
   .primary-btn, .secondary-btn, .ghost-btn { padding: 11px 18px; font-size: 0.88rem; }
-  .result-actions { flex-direction: column; align-items: stretch; }
-  .result-actions button { text-align: center; }
-  .toolbar-hint { font-size: 0.78rem; }
+  .result-actions { flex-direction: column; align-items: stretch; text-align: center; }
+  .toolbar-hint { display: none; }
 }
