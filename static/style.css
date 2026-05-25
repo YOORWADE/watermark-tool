@@ -127,6 +127,45 @@ main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 }
 .tool-btn:hover { border-color: #6b8cff; color: #a0b4ff; }
 
+/* ── 绘制模式切换 ── */
+.draw-mode-group {
+  display: flex;
+  background: #111118;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.mode-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.mode-btn.active {
+  background: #2a2a4a;
+  color: #a0b4ff;
+}
+.mode-btn:hover:not(.active) { color: #999; }
+
+.brush-size-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+#brush-size {
+  width: 70px;
+  accent-color: #6b8cff;
+  cursor: pointer;
+}
+
 /* 自动识别按钮 */
 .detect-btn {
   padding: 7px 18px;

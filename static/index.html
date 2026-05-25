@@ -42,10 +42,19 @@
     <div id="canvas-section" class="hidden">
       <div class="toolbar">
         <div class="toolbar-left">
+          <!-- 绘制模式切换 -->
+          <div class="draw-mode-group">
+            <button class="mode-btn active" data-mode="rect">矩形框选</button>
+            <button class="mode-btn" data-mode="brush">画笔涂抹</button>
+          </div>
+          <span class="toolbar-divider"></span>
+          <!-- 笔刷大小（画笔模式时显示） -->
+          <div id="brush-size-ctrl" class="brush-size-ctrl hidden">
+            <span class="toolbar-hint">大小</span>
+            <input type="range" id="brush-size" min="5" max="100" value="20">
+          </div>
           <!-- 自动识别按钮 -->
           <button id="auto-detect-btn" class="detect-btn">自动识别水印</button>
-          <span class="toolbar-divider"></span>
-          <span class="toolbar-hint">或手动拖拽框选区域</span>
         </div>
         <div class="toolbar-btns">
           <button id="undo-btn" class="tool-btn">撤销</button>
@@ -67,7 +76,7 @@
         </div>
       </div>
 
-      <p class="hint center">红色区域将被去除 &mdash; 可叠加多个选框</p>
+      <p class="hint center" id="draw-hint">红色区域将被去除 &mdash; 拖拽绘制矩形，可叠加多个</p>
 
       <div class="action-row">
         <button id="process-btn" class="primary-btn">开始去除水印</button>

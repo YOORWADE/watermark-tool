@@ -3,16 +3,22 @@
 // ─── 状态 ─────────────────────────────────────────────────────
 const state = {
   mode: 'image',
+  drawMode: 'rect',      // 'rect' | 'brush'
+  brushSize: 20,
   file: null,
-  bgSource: null,       // HTMLImageElement | HTMLVideoElement
+  bgSource: null,
   originalW: 0,
   originalH: 0,
-  rects: [],            // 已完成选框 [{x,y,w,h}]
+  rects: [],
   dragStart: null,
   dragCurrent: null,
   isDrawing: false,
-  detecting: false,     // 自动识别进行中
+  detecting: false,
   resultUrl: null,
+  paintCanvas: null,     // OffscreenCanvas — 画笔涂抹层
+  paintCtx: null,
+  hasPaintStrokes: false,
+  undoStack: [],         // [{type:'rect'} | {type:'paint', data:ImageData}]
 };
 
 // ─── DOM ──────────────────────────────────────────────────────
@@ -30,13 +36,16 @@ const resultVideo    = document.getElementById('result-video');
 const detectOverlay  = document.getElementById('detect-overlay');
 const detectTip      = document.getElementById('detect-tip');
 const autoDetectBtn  = document.getElementById('auto-detect-btn');
+const brushSizeCtrl  = document.getElementById('brush-size-ctrl');
+const brushSizeInput = document.getElementById('brush-size');
+const drawHint       = document.getElementById('draw-hint');
 
 const SECTIONS = [uploadArea, canvasSec, loadingSec, resultSec];
 function show(sec) {
   SECTIONS.forEach(s => s.classList.toggle('hidden', s !== sec));
 }
 
-// ─── 模式切换 ─────────────────────────────────────────────────
+// ─── 文件模式切换（图片 / 视频）──────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -48,6 +57,24 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
       : '支持 MP4 / MOV / AVI 格式';
     reset();
   });
+});
+
+// ─── 绘制模式切换（矩形 / 画笔）──────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.drawMode = btn.dataset.mode;
+    const isBrush = state.drawMode === 'brush';
+    brushSizeCtrl.classList.toggle('hidden', !isBrush);
+    drawHint.textContent = isBrush
+      ? '红色区域将被去除 — 按住拖动自由涂抹，可调节笔刷大小'
+      : '红色区域将被去除 — 拖拽绘制矩形，可叠加多个';
+  });
+});
+
+brushSizeInput.addEventListener('input', () => {
+  state.brushSize = parseInt(brushSizeInput.value, 10);
 });
 
 // ─── 上传 ─────────────────────────────────────────────────────
@@ -64,6 +91,7 @@ uploadArea.addEventListener('drop', e => {
 function loadFile(file) {
   state.file = file;
   state.rects = [];
+  state.undoStack = [];
   detectTip.classList.add('hidden');
   state.mode === 'image' ? loadImage(file) : loadVideo(file);
 }
@@ -100,12 +128,19 @@ function setupCanvas(w, h) {
   state.originalH = h;
   canvas.width = w;
   canvas.height = h;
+  state.paintCanvas = new OffscreenCanvas(w, h);
+  state.paintCtx = state.paintCanvas.getContext('2d');
+  state.hasPaintStrokes = false;
+  state.undoStack = [];
 }
 
 // ─── 渲染 ─────────────────────────────────────────────────────
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (state.bgSource) ctx.drawImage(state.bgSource, 0, 0);
+
+  // 画笔涂抹层
+  if (state.paintCanvas) ctx.drawImage(state.paintCanvas, 0, 0);
 
   for (const rect of state.rects) drawSelectionRect(ctx, rect, false);
 
@@ -137,6 +172,22 @@ function drawSelectionRect(targetCtx, rect, isActive) {
   targetCtx.restore();
 }
 
+// ─── 画笔 ─────────────────────────────────────────────────────
+function paintAt(point, radius) {
+  if (!state.paintCtx) return;
+  state.paintCtx.fillStyle = 'rgba(255,50,50,0.55)';
+  state.paintCtx.beginPath();
+  state.paintCtx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+  state.paintCtx.fill();
+  state.hasPaintStrokes = true;
+}
+
+function savePaintSnapshot() {
+  if (!state.paintCtx) return;
+  const snap = state.paintCtx.getImageData(0, 0, state.originalW, state.originalH);
+  state.undoStack.push({ type: 'paint', data: snap });
+}
+
 // ─── 坐标映射 ─────────────────────────────────────────────────
 function getPoint(e) {
   const rect = canvas.getBoundingClientRect();
@@ -156,44 +207,66 @@ function makeRect(p1, p2) {
   };
 }
 
-// ─── 框选事件 ─────────────────────────────────────────────────
-canvas.addEventListener('mousedown', e => {
+// ─── 绘制事件 ─────────────────────────────────────────────────
+function onStart(e) {
   if (state.detecting) return;
   state.isDrawing = true;
-  state.dragStart = getPoint(e);
-  state.dragCurrent = { ...state.dragStart };
-});
-canvas.addEventListener('mousemove', e => {
-  if (!state.isDrawing) return;
-  state.dragCurrent = getPoint(e);
-  render();
-});
-canvas.addEventListener('mouseup', e => { if (state.isDrawing) finalizeRect(getPoint(e)); });
-canvas.addEventListener('mouseleave', () => {
-  if (state.isDrawing && state.dragCurrent) finalizeRect(state.dragCurrent);
-});
+  const pt = getPoint(e);
+  if (state.drawMode === 'brush') {
+    savePaintSnapshot();
+    paintAt(pt, state.brushSize);
+    render();
+  } else {
+    state.dragStart = pt;
+    state.dragCurrent = { ...pt };
+  }
+}
 
-canvas.addEventListener('touchstart', e => {
-  if (state.detecting) return;
-  e.preventDefault();
-  state.isDrawing = true;
-  state.dragStart = getPoint(e);
-  state.dragCurrent = { ...state.dragStart };
-}, { passive: false });
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
+function onMove(e) {
   if (!state.isDrawing) return;
-  state.dragCurrent = getPoint(e);
-  render();
-}, { passive: false });
-canvas.addEventListener('touchend', e => {
-  e.preventDefault();
-  if (state.isDrawing) finalizeRect(state.dragCurrent);
-}, { passive: false });
+  const pt = getPoint(e);
+  if (state.drawMode === 'brush') {
+    paintAt(pt, state.brushSize);
+    render();
+  } else {
+    state.dragCurrent = pt;
+    render();
+  }
+}
+
+function onEnd(e) {
+  if (!state.isDrawing) return;
+  if (state.drawMode === 'rect') {
+    finalizeRect(e ? getPoint(e) : state.dragCurrent);
+  } else {
+    state.isDrawing = false;
+  }
+}
+
+function onLeave() {
+  if (!state.isDrawing) return;
+  if (state.drawMode === 'rect' && state.dragCurrent) {
+    finalizeRect(state.dragCurrent);
+  } else {
+    state.isDrawing = false;
+  }
+}
+
+canvas.addEventListener('mousedown', onStart);
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('mouseup', onEnd);
+canvas.addEventListener('mouseleave', onLeave);
+
+canvas.addEventListener('touchstart', e => { e.preventDefault(); onStart(e); }, { passive: false });
+canvas.addEventListener('touchmove',  e => { e.preventDefault(); onMove(e);  }, { passive: false });
+canvas.addEventListener('touchend',   e => { e.preventDefault(); onEnd(null); }, { passive: false });
 
 function finalizeRect(endPoint) {
   const rect = makeRect(state.dragStart, endPoint);
-  if (rect.w > 4 && rect.h > 4) state.rects.push(rect);
+  if (rect.w > 4 && rect.h > 4) {
+    state.rects.push(rect);
+    state.undoStack.push({ type: 'rect' });
+  }
   state.dragStart = null;
   state.dragCurrent = null;
   state.isDrawing = false;
@@ -201,9 +274,25 @@ function finalizeRect(endPoint) {
 }
 
 // ─── 撤销 / 清除 ──────────────────────────────────────────────
-document.getElementById('undo-btn').addEventListener('click', () => { state.rects.pop(); render(); });
+document.getElementById('undo-btn').addEventListener('click', () => {
+  const last = state.undoStack.pop();
+  if (!last) return;
+  if (last.type === 'rect') {
+    state.rects.pop();
+  } else if (last.type === 'paint' && state.paintCtx) {
+    state.paintCtx.putImageData(last.data, 0, 0);
+    state.hasPaintStrokes = state.undoStack.some(a => a.type === 'paint');
+  }
+  render();
+});
+
 document.getElementById('clear-btn').addEventListener('click', () => {
   state.rects = [];
+  state.undoStack = [];
+  if (state.paintCtx) {
+    state.paintCtx.clearRect(0, 0, state.originalW, state.originalH);
+    state.hasPaintStrokes = false;
+  }
   detectTip.classList.add('hidden');
   render();
 });
@@ -214,12 +303,10 @@ autoDetectBtn.addEventListener('click', autoDetect);
 async function autoDetect() {
   if (!state.file || !state.bgSource) return;
 
-  // 将当前帧导出为 PNG blob 发给后端
   let blob;
   if (state.mode === 'image') {
     blob = state.file;
   } else {
-    // 视频：把首帧画到离屏 canvas 再导出
     const off = new OffscreenCanvas(state.originalW, state.originalH);
     const octx = off.getContext('2d');
     octx.drawImage(state.bgSource, 0, 0);
@@ -241,12 +328,14 @@ async function autoDetect() {
     const data = await res.json();
 
     if (data.rects && data.rects.length > 0) {
-      // 将后端返回的矩形合并到现有选框中
-      state.rects = [...state.rects, ...data.rects];
+      for (const r of data.rects) {
+        state.rects.push(r);
+        state.undoStack.push({ type: 'rect' });
+      }
       render();
       detectTip.classList.remove('hidden');
     } else {
-      alert('未检测到明显水印，请手动框选');
+      alert('未检测到明显水印，请手动框选或涂抹');
     }
   } catch (err) {
     alert('识别失败：' + err.message);
@@ -263,17 +352,37 @@ async function generateMask() {
   const octx = off.getContext('2d');
   octx.fillStyle = '#000';
   octx.fillRect(0, 0, state.originalW, state.originalH);
+
+  // 矩形区域 → 白色
   octx.fillStyle = '#fff';
   for (const rect of state.rects) {
     octx.fillRect(rect.x, rect.y, rect.w, rect.h);
   }
+
+  // 画笔涂抹区域 → 白色
+  if (state.hasPaintStrokes && state.paintCtx) {
+    const paintData = state.paintCtx.getImageData(0, 0, state.originalW, state.originalH);
+    const maskData  = octx.getImageData(0, 0, state.originalW, state.originalH);
+    for (let i = 3; i < paintData.data.length; i += 4) {
+      if (paintData.data[i] > 10) {
+        const p = i - 3;
+        maskData.data[p]     = 255;
+        maskData.data[p + 1] = 255;
+        maskData.data[p + 2] = 255;
+        maskData.data[p + 3] = 255;
+      }
+    }
+    octx.putImageData(maskData, 0, 0);
+  }
+
   return off.convertToBlob({ type: 'image/png' });
 }
 
 // ─── 提交处理 ─────────────────────────────────────────────────
 document.getElementById('process-btn').addEventListener('click', async () => {
-  if (!state.file || !state.rects.length) {
-    alert('请先上传文件，然后框选或自动识别水印区域');
+  const hasMarks = state.rects.length > 0 || state.hasPaintStrokes;
+  if (!state.file || !hasMarks) {
+    alert('请先上传文件，然后框选或涂抹水印区域');
     return;
   }
 
@@ -335,10 +444,13 @@ function reset() {
   state.file = null;
   state.bgSource = null;
   state.rects = [];
+  state.undoStack = [];
   state.dragStart = null;
   state.dragCurrent = null;
   state.isDrawing = false;
   state.detecting = false;
+  state.hasPaintStrokes = false;
+  if (state.paintCtx) state.paintCtx.clearRect(0, 0, state.originalW, state.originalH);
   if (state.resultUrl) { URL.revokeObjectURL(state.resultUrl); state.resultUrl = null; }
   fileInput.value = '';
   detectTip.classList.add('hidden');
