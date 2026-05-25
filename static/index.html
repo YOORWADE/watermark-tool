@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>去水印工具</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="header-left">
+        <h1>去水印工具</h1>
+        <p class="subtitle">框选水印区域，一键智能修复 &mdash; 支持图片与视频</p>
+      </div>
+      <div class="net-badge">
+        <span class="net-label">手机访问</span>
+        <code id="mobile-url">加载中…</code>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 模式切换 -->
+    <div class="tabs">
+      <button class="tab-btn active" data-mode="image">图片模式</button>
+      <button class="tab-btn" data-mode="video">视频模式</button>
+    </div>
+
+    <!-- 上传区域 -->
+    <div id="upload-area">
+      <div class="upload-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="upload-title">点击选择文件或拖拽到此处</p>
+      <p id="upload-hint" class="hint">支持 JPG / PNG / WEBP 格式</p>
+      <input type="file" id="file-input" accept="image/*">
+    </div>
+
+    <!-- 画板区域 -->
+    <div id="canvas-section" class="hidden">
+      <div class="toolbar">
+        <p class="toolbar-hint">拖拽鼠标（或手指）框选水印区域，可叠加多个选框</p>
+        <div class="toolbar-btns">
+          <button id="undo-btn" class="tool-btn">撤销</button>
+          <button id="clear-btn" class="tool-btn">清除全部</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="main-canvas"></canvas>
+      </div>
+
+      <p class="hint center">红色矩形区域将被去除 &mdash; 尽量贴合水印边缘以获得最佳效果</p>
+
+      <div class="action-row">
+        <button id="process-btn" class="primary-btn">开始去除水印</button>
+      </div>
+    </div>
+
+    <!-- 处理中 -->
+    <div id="loading-section" class="hidden loading-wrap">
+      <div class="spinner"></div>
+      <p id="loading-text">处理中，请稍候…</p>
+    </div>
+
+    <!-- 结果展示 -->
+    <div id="result-section" class="hidden">
+      <h2 class="result-title">处理完成</h2>
+      <div class="result-media">
+        <img id="result-img" alt="处理结果">
+        <video id="result-video" controls playsinline></video>
+      </div>
+      <div class="result-actions">
+        <button id="download-btn" class="primary-btn">下载结果</button>
+        <button id="edit-again-btn" class="secondary-btn">重新框选</button>
+        <button id="reupload-btn" class="ghost-btn">换一张</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

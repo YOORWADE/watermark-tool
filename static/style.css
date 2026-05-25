@@ -1,0 +1,235 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0f0f13;
+  color: #e0e0e6;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid #2a2a40;
+  padding: 16px 24px;
+}
+.header-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+h1 { font-size: 1.4rem; font-weight: 700; color: #a0b4ff; letter-spacing: 0.5px; }
+.subtitle { margin-top: 3px; font-size: 0.82rem; color: #555; }
+
+/* 手机访问地址徽章 */
+.net-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(107, 140, 255, 0.08);
+  border: 1px solid rgba(107, 140, 255, 0.25);
+  border-radius: 8px;
+  padding: 6px 12px;
+  flex-shrink: 0;
+}
+.net-label { font-size: 0.75rem; color: #666; white-space: nowrap; }
+#mobile-url {
+  font-size: 0.82rem;
+  color: #7c9ef8;
+  background: transparent;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  white-space: nowrap;
+}
+
+/* ── Main ── */
+main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+.tab-btn {
+  padding: 8px 28px;
+  border: 1.5px solid #333;
+  border-radius: 999px;
+  background: transparent;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.tab-btn.active, .tab-btn:hover {
+  border-color: #6b8cff;
+  color: #a0b4ff;
+  background: rgba(107, 140, 255, 0.1);
+}
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+.hint { font-size: 0.82rem; color: #555; }
+.hint.center { text-align: center; margin-top: 8px; }
+
+/* ── Upload area ── */
+#upload-area {
+  border: 2px dashed #2e2e45;
+  border-radius: 14px;
+  padding: 64px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+#upload-area:hover, #upload-area.drag-over {
+  border-color: #6b8cff;
+  background: rgba(107, 140, 255, 0.05);
+}
+.upload-icon { width: 52px; height: 52px; margin: 0 auto 16px; color: #444; }
+.upload-icon svg { width: 100%; height: 100%; }
+.upload-title { font-size: 1rem; color: #bbb; margin-bottom: 6px; }
+#file-input { display: none; }
+
+/* ── Canvas section ── */
+#canvas-section { display: flex; flex-direction: column; gap: 12px; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: #16161f;
+  border: 1px solid #2a2a3a;
+  border-radius: 10px;
+  padding: 10px 16px;
+}
+.toolbar-hint { font-size: 0.83rem; color: #666; flex: 1; min-width: 180px; }
+.toolbar-btns { display: flex; gap: 8px; }
+.tool-btn {
+  padding: 6px 16px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #1e1e2e;
+  color: #aaa;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tool-btn:hover { border-color: #6b8cff; color: #a0b4ff; }
+
+.canvas-wrapper {
+  background: #080810;
+  border-radius: 10px;
+  border: 1px solid #1e1e2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding: 4px;
+}
+#main-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 62vh;
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none; /* 阻止触摸滚动，确保手机拖拽框选正常 */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.action-row { display: flex; justify-content: center; padding-top: 4px; }
+
+/* ── Buttons ── */
+.primary-btn {
+  padding: 12px 36px;
+  background: linear-gradient(135deg, #4a6cf7, #7c3aed);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.3px;
+}
+.primary-btn:hover { opacity: 0.88; }
+.primary-btn:active { transform: scale(0.97); }
+.primary-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.secondary-btn {
+  padding: 12px 28px;
+  background: #1e1e2e;
+  border: 1px solid #3a3a55;
+  border-radius: 8px;
+  color: #bbb;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.secondary-btn:hover { border-color: #6b8cff; color: #a0b4ff; }
+
+.ghost-btn {
+  padding: 12px 28px;
+  background: transparent;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ghost-btn:hover { color: #aaa; border-color: #444; }
+
+/* ── Loading ── */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80px 0;
+  gap: 20px;
+}
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid #222;
+  border-top-color: #6b8cff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-text { color: #666; font-size: 0.9rem; }
+
+/* ── Result ── */
+#result-section { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.result-title { color: #a0b4ff; font-size: 1.15rem; }
+.result-media {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: #080810;
+  border-radius: 10px;
+  border: 1px solid #1e1e2e;
+  padding: 8px;
+}
+#result-img, #result-video {
+  max-width: 100%;
+  max-height: 68vh;
+  border-radius: 6px;
+  display: none;
+}
+.result-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  header { padding: 12px 16px; }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .net-badge { width: 100%; }
+  .tabs { gap: 6px; }
+  .tab-btn { padding: 7px 18px; font-size: 0.85rem; }
+  .primary-btn, .secondary-btn, .ghost-btn { padding: 11px 18px; font-size: 0.88rem; }
+  .result-actions { flex-direction: column; align-items: stretch; }
+  .result-actions button { text-align: center; }
+  .toolbar-hint { font-size: 0.78rem; }
+}
