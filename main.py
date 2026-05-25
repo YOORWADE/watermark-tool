@@ -105,45 +105,63 @@ def _nms(rects: list, thresh: float = 0.35) -> list:
 
 def detect_watermark_regions(img: np.ndarray) -> list[dict]:
     """
-    启发式水印区域检测：
-    1. 边缘密度图（捕捉文字/Logo 水印的锐利轮廓）
-    2. 高亮度区域（白色半透明水印）
-    两者叠加后，找连通域并过滤尺寸。
-    注意：无法达到 AI 模型的精度，建议用户在结果上手动微调。
+    三通道启发式水印检测，专针对文字 / Logo：
+      1. 边缘密度  —— 文字笔画、Logo 轮廓均有密集边缘
+      2. 高亮区域  —— 白色/浅色半透明水印（阈值 170，比原来更宽松）
+      3. 高饱和度  —— 彩色 Logo（HSV S 通道）
+    + 角落/边缘加权：水印 90% 以上位于四角或顶底横条
     """
     h, w = img.shape[:2]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    hsv  = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-    # 自适应核大小（随图片分辨率缩放）
-    k = max(5, min(w, h) // 50)
+    # 更小的核：保留细节，不把不相关区域合并在一起
+    k = max(3, min(w, h) // 80)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k * 2, k * 2))
 
-    # 边缘密度
-    edges = cv2.Canny(gray, 80, 180)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (k, k))
-    edge_map = cv2.dilate(edges, kernel, iterations=2)
+    # ── 信号1：边缘密度（降低 Canny 阈值，捕捉低对比度文字）──
+    edges = cv2.Canny(gray, 30, 100)
+    edge_map = cv2.dilate(edges, kernel, iterations=3)
 
-    # 高亮区域（白色水印）
-    _, bright = cv2.threshold(gray, 210, 255, cv2.THRESH_BINARY)
+    # ── 信号2：高亮区（白色/浅色水印，阈值 170）──────────────
+    _, bright = cv2.threshold(gray, 170, 255, cv2.THRESH_BINARY)
     bright_map = cv2.dilate(bright, kernel, iterations=1)
 
-    combined = cv2.bitwise_or(edge_map, bright_map)
+    # ── 信号3：高饱和度（彩色 Logo）──────────────────────────
+    _, sat_map = cv2.threshold(hsv[:, :, 1], 80, 255, cv2.THRESH_BINARY)
+    sat_map = cv2.dilate(sat_map, kernel, iterations=1)
 
-    # 闭运算：填补内部空洞
-    close_k = cv2.getStructuringElement(cv2.MORPH_RECT, (k * 2, k * 2))
+    combined = cv2.bitwise_or(cv2.bitwise_or(edge_map, bright_map), sat_map)
+
+    # ── 角落 / 边缘加权：在这些区域额外膨胀，使连通域更容易成形 ──
+    mw, mh = w // 5, h // 5
+    corners = np.zeros_like(combined)
+    corners[:mh, :mw]       = combined[:mh, :mw]        # 左上
+    corners[:mh, w - mw:]   = combined[:mh, w - mw:]    # 右上
+    corners[h - mh:, :mw]   = combined[h - mh:, :mw]    # 左下
+    corners[h - mh:, w-mw:] = combined[h - mh:, w-mw:]  # 右下
+    corners[:h // 8, :]     = combined[:h // 8, :]       # 顶部横条
+    corners[h - h//8:, :]   = combined[h - h//8:, :]     # 底部横条
+
+    boost_k = cv2.getStructuringElement(cv2.MORPH_RECT, (k * 5, k * 3))
+    combined = cv2.bitwise_or(combined, cv2.dilate(corners, boost_k, iterations=1))
+
+    # ── 闭运算：连接字符间隙，填补 Logo 内部空洞 ─────────────
+    close_k = cv2.getStructuringElement(cv2.MORPH_RECT, (k * 3, k * 2))
     combined = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, close_k)
 
     contours, _ = cv2.findContours(combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    min_area = (h * w) * 0.0008
-    max_area = (h * w) * 0.22
+    min_area = (h * w) * 0.0002   # 更小：允许捕捉小 Logo
+    max_area = (h * w) * 0.30
 
     rects = []
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if min_area < area < max_area:
             x, y, cw, ch = cv2.boundingRect(cnt)
-            if cw < w * 0.85 and ch < h * 0.85:
-                pad = max(5, k // 2)
+            if cw < w * 0.90 and ch < h * 0.90:
+                pad = max(4, k)
                 rects.append({
                     "x": int(max(0, x - pad)),
                     "y": int(max(0, y - pad)),
@@ -152,7 +170,7 @@ def detect_watermark_regions(img: np.ndarray) -> list[dict]:
                 })
 
     rects.sort(key=lambda r: r["w"] * r["h"], reverse=True)
-    return _nms(rects)[:8]
+    return _nms(rects, thresh=0.3)[:8]
 
 
 # ─────────────────────────── 接口 ───────────────────────────────
